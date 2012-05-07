@@ -21,7 +21,7 @@ def searchFiles(path, pattern):
 	entries = os.listdir(path)
 	matchingFiles = []
 	for e in entries:
-		if   (os.path.isdir(path +"/"+ e)): matchingFiles += searchFiles(path +"/"+ e, pattern)
+		if   (os.path.isdir(path + os.sep + e)): matchingFiles += searchFiles(path + os.sep + e, pattern)
 		elif (e.find(pattern) != -1): 		matchingFiles.append(e)
 	return matchingFiles
 
