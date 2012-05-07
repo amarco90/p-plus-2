@@ -5,8 +5,6 @@ import socket
 import socketserver
 import threading
 
-# comment added by Pedro at 22:28:00
-
 # constants
 VERSION		= "p+2 0.0.0.0.0.0.0.0.0.1 megaAlpha"
 MIN_ARGS	= 4
