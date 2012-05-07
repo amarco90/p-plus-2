@@ -14,6 +14,16 @@ QUERY 		= 1
 DOWNLOAD 	= 2
 OK_COLOR 	= "\033[1;32m"
 END_COLOR 	= "\033[0m"
+	
+# some functions needed
+# this functions returns a list with the names of the files that match the pattern
+def searchFiles(path, pattern):
+	entries = os.listdir(path)
+	matchingFiles = []
+	for e in entries:
+		if   (os.path.isdir(path +"/"+ e)): matchingFiles += searchFiles(path +"/"+ e, pattern)
+		elif (e.find(pattern) != -1): 		matchingFiles.append(e)
+	return matchingFiles
 
 # some classes needed
 class PeerList(socketserver.BaseRequestHandler):
@@ -34,12 +44,8 @@ class Query(socketserver.BaseRequestHandler):
 	
 	def handle(self):
 		data = self.request.recv(1024)
-		fileName = str(data.decode(ENCODING))[:-1]
-		# creating a list with the files that match
-		files = os.listdir(myFolder)
-		foundFiles = []
-		for f in files: # TODO: look inside folders????
-			if (f.find(fileName) != -1): foundFiles.append(f)
+		pattern = str(data.decode(ENCODING))[:-1]
+		foundFiles = searchFiles(myFolder, pattern)
 		# sending the list of files that match
 		msg = "\n".join(foundFiles)
 		response = bytes(msg, ENCODING)
@@ -78,7 +84,7 @@ if __name__ == "__main__":
 		exit(2)
 
 	peers.append(args[3])
-	if len(peers[0].split(":")) < 2:
+	if len(peers[0].split(":")) != 2:
 		sys.stderr.write("A peer must be specified in this way:\n")
 		sys.stderr.write("\t"+ "peer-ip:peer-port\n")
 		exit(3)
