@@ -22,7 +22,7 @@ def searchFiles(path, pattern):
 	matchingFiles = []
 	for e in entries:
 		if   (os.path.isdir(path + os.sep + e)): matchingFiles += searchFiles(path + os.sep + e, pattern)
-		elif (e.find(pattern) != -1): 		matchingFiles.append(e)
+		elif (e.lower().find(pattern) != -1): 	 matchingFiles.append(path[len(myFolder) + 1:] + os.sep + e)
 	return matchingFiles
 
 # some classes needed
@@ -36,6 +36,7 @@ class PeerList(socketserver.BaseRequestHandler):
 			peers.append(peer)
 		# sending our list
 		msg = "\n".join(peers)
+		msg += "\n"
 		response = bytes(msg, ENCODING)
 		self.request.send(response)
 		# TODO: close connection from server here (how?)
@@ -45,9 +46,10 @@ class Query(socketserver.BaseRequestHandler):
 	def handle(self):
 		data = self.request.recv(1024)
 		pattern = str(data.decode(ENCODING))[:-1]
-		foundFiles = searchFiles(myFolder, pattern)
+		foundFiles = searchFiles(myFolder, pattern.lower())
 		# sending the list of files that match
 		msg = "\n".join(foundFiles)
+		msg += "\n"
 		response = bytes(msg, ENCODING)
 		self.request.send(response)
 		# TODO: close connection from server here (how?)
@@ -111,6 +113,9 @@ if __name__ == "__main__":
 	server3Thread.setDaemon(True)
 	server3Thread.start()
 	
-	while True:
-		pass
-#		exit(0)
+	# main loop
+	command = ""
+	while command != "quit":
+		command = input()
+	
+	exit(0)
