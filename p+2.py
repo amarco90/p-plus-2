@@ -5,7 +5,7 @@ import socket
 import socketserver
 import threading
 
-# constants
+# constantss
 VERSION     = "p+2 0.0.0.0.0.0.0.0.1.0 superAlpha"
 MIN_ARGS    = 2
 ENCODING    = "utf_8"
@@ -23,11 +23,7 @@ def searchFiles(path, pattern):
 	matchingFiles = []
 	for e in entries:
 		if   (os.path.isdir(path + os.sep + e)): matchingFiles += searchFiles(path + os.sep + e, pattern)
-<<<<<<< HEAD
-		elif (e.lower().find(pattern) != -1): 	 matchingFiles.append(path[len(myFolder) + 1:] + os.sep + e)
-=======
 		elif (e.lower().find(pattern) != -1):    matchingFiles.append(path[len(myFolder) + 1:] + os.sep + e)
->>>>>>> query
 	return matchingFiles
 
 # this function checks if a given port is valid or not 
@@ -76,17 +72,11 @@ class Query(socketserver.BaseRequestHandler):
 	def handle(self):
 		data = self.request.recv(1024)
 		pattern = str(data.decode(ENCODING))[:-1]
-<<<<<<< HEAD
-		foundFiles = searchFiles(myFolder, pattern.lower())
-		# sending the list of files that match
-		msg = "\n".join(foundFiles)
-=======
 		msg = ""
 		if os.path.exists(myFolder):
 			foundFiles = searchFiles(myFolder, pattern.lower())
 			# sending the list of files that match
 			msg += "\n".join(foundFiles)
->>>>>>> query
 		msg += "\n"
 		response = bytes(msg, ENCODING)
 		self.request.send(response)
@@ -144,11 +134,6 @@ if __name__ == "__main__":
 	# main loop
 	command = ""
 	while command != "quit":
-<<<<<<< HEAD
-		command = input()
-	
-	exit(0)
-=======
 		userInput = input("> ")
 		inputSplitted = userInput.split(" ")
 		command = inputSplitted[0]
@@ -237,4 +222,3 @@ if __name__ == "__main__":
 		else:
 			print("Command not found")
 	exit(0)
->>>>>>> query
