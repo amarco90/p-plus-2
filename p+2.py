@@ -211,9 +211,12 @@ if __name__ == "__main__":
 						aux = sock.recv(1024)
 						dataReceived += aux
 					filesPeer = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
-					files += filesPeer
+					# files += filesPeer  NO VA AQUIIIIIIII!!!!!! MASTERBUUGGGGGGGGG!!!!!! 5:45am
 					if len(filesPeer) >= 1 and filesPeer[0] != "":
-						print("\nMatches in peer (" + p + "):")
+						files += filesPeer
+						print("\nMatches in peer ("+ p +" ", end="")
+						os.system("ping -c 1 "+ p.split(":")[0] +" | tail -1| awk '{printf "+ '"' +"%.3f"+ '"' + ", $4}' | cut -d '/' -f 2")
+						print("ms):")
 						for j in range(i, len(files)):
 							line = files[j]
 							file = line[line.rfind(os.sep) + 1:]
@@ -222,20 +225,15 @@ if __name__ == "__main__":
 							if fileName == "": 
 								print(OK_COLOR + file + END_COLOR)
 							else:
-								#print(file)
-#								file = file.split(fileName)
-#								for k in range(len(file)-1):
-#									print(file[k] + OK_COLOR + fileName + END_COLOR, end="")
-#								print(file[len(file)-1])
-								p = 0
+								pos = 0
 								fileLower = file.lower().split(fileName.lower())
 								for k in range(len(fileLower)-1):
-									aux = p + len(fileLower[k])
-									print(file[p:aux] + OK_COLOR + file[aux: aux+len(fileName)] + END_COLOR, end="")
-									p = aux + len(fileName)
-								print(file[p:p+len(fileLower[len(fileLower)-1])])
+									aux = pos + len(fileLower[k])
+									print(file[pos:aux] + OK_COLOR + file[aux: aux+len(fileName)] + END_COLOR, end="")
+									pos = aux + len(fileName)
+								print(file[pos:pos+len(fileLower[len(fileLower)-1])])
 					sourcePeer.append( (i, p) )
-				except:
+				except socket.error:
 					pass
 			if len(files) >= 1 and files[0] != "":
 				numFile = ""
