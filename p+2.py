@@ -222,6 +222,11 @@ if __name__ == "__main__":
 							if fileName == "": 
 								print(OK_COLOR + file + END_COLOR)
 							else:
+								#print(file)
+#								file = file.split(fileName)
+#								for k in range(len(file)-1):
+#									print(file[k] + OK_COLOR + fileName + END_COLOR, end="")
+#								print(file[len(file)-1])
 								p = 0
 								fileLower = file.lower().split(fileName.lower())
 								for k in range(len(fileLower)-1):
