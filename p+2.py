@@ -4,8 +4,9 @@ import os
 import socket
 import socketserver
 import threading
+from time import sleep
 
-# constantss
+# constants
 VERSION     = "p+2 0.0.0.0.0.0.0.0.1.0 superAlpha"
 MIN_ARGS    = 2
 ENCODING    = "utf_8"
@@ -85,7 +86,7 @@ class Query(socketserver.BaseRequestHandler):
 class Upload(socketserver.BaseRequestHandler):
 
 	def handle(self):
-		data = self.request.recv(1024)
+		data = self.request.recv(2048)
 		fileName = os.sep + str(data.decode(ENCODING))[:-1]
 		try:
 			f = open(myFolder + fileName, "rb")
@@ -98,6 +99,33 @@ class Upload(socketserver.BaseRequestHandler):
 
 class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 	pass
+	
+class UpdatePeers ( threading.Thread ):
+
+	def run ( self ):
+		global peers
+		while not byeBye:
+			#print(peers)
+			auxPeers = []
+			for p in peers:
+				try:
+					sockt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					address = p.split(":")
+					sockt.connect( (address[0], int(address[1]) + PEER_LIST) )
+					sockt.sendall(bytes(myHost +":"+ str(myPort) +"\n", ENCODING))
+					dataReceived = sockt.recv(1024)
+					otherPeers = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
+					for oP in otherPeers:
+						if oP != "" and oP != (myHost +":"+ str(myPort)) and oP not in peers and oP not in auxPeers:
+							auxPeers.append(oP)
+				except socket.error:
+					peers.remove(p)
+			
+			peers += auxPeers
+					
+			for t in range(100):
+				if not byeBye: sleep(0.1)
+			
 
 if __name__ == "__main__":
 	# processing arguments
@@ -131,6 +159,9 @@ if __name__ == "__main__":
 	server3Thread.setDaemon(True)
 	server3Thread.start()
 	
+	byeBye = False
+	UpdatePeers().start()
+	
 	# main loop
 	command = ""
 	while command != "quit":
@@ -151,8 +182,11 @@ if __name__ == "__main__":
 				print("That folder does not exist")
 		elif command == "addpeer":
 			error = "A peer must be specified in this way:\n\tpeer-ip:peer-port"
-			if hasErrorsAddPeer(inputSplitted): print(error)
-			else: peers.append(inputSplitted[1])
+			if hasErrorsAddPeer(inputSplitted): 
+				print(error)
+			else: 
+				if (myHost +":"+ str(myPort)) != inputSplitted[1] and not inputSplitted[1] in peers: 
+					peers.append(inputSplitted[1])
 		elif command == "query" and len(myFolder) == 0:
 			print("First, you have to set the folder.")
 		elif command == "query" and len(peers) == 0:
@@ -171,7 +205,11 @@ if __name__ == "__main__":
 					address = p.split(":")
 					sock.connect((address[0], int(address[1]) + QUERY))
 					sock.sendall(nameToSend)
-					dataReceived = sock.recv(1024)
+					aux = sock.recv(1024)
+					dataReceived = aux
+					while len(aux) > 0:
+						aux = sock.recv(1024)
+						dataReceived += aux
 					filesPeer = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
 					files += filesPeer
 					if len(filesPeer) >= 1 and filesPeer[0] != "":
@@ -184,10 +222,13 @@ if __name__ == "__main__":
 							if fileName == "": 
 								print(OK_COLOR + file + END_COLOR)
 							else:
-								file = file.split(fileName)
-								for k in range(len(file)-1):
-									print(file[k] + OK_COLOR + fileName + END_COLOR, end="")
-								print(file[len(file)-1])
+								p = 0
+								fileLower = file.lower().split(fileName.lower())
+								for k in range(len(fileLower)-1):
+									aux = p + len(fileLower[k])
+									print(file[p:aux] + OK_COLOR + file[aux: aux+len(fileName)] + END_COLOR, end="")
+									p = aux + len(fileName)
+								print(file[p:p+len(fileLower[len(fileLower)-1])])
 					sourcePeer.append( (i, p) )
 				except:
 					pass
@@ -209,13 +250,16 @@ if __name__ == "__main__":
 						sock.sendall(bytes(files[numFile - 1] + "\n", ENCODING))
 						f = open(myFolder + files[numFile - 1][files[numFile - 1].rfind(os.sep):], "wb")
 						dataReceived = sock.recv(1024)
-						#dataReceived = str(dataReceived.decode(ENCODING))
-						#f.write(bytes(dataReceived, ENCODING))
+						f.write(dataReceived)
+						while len(dataReceived) > 0:
+							dataReceived = sock.recv(1024)
+							f.write(dataReceived)
 						f.close()
 					except socket.error:
 						print("The peer is down.")
 					
 		elif command == "quit":
+			byeBye = True
 			pass
 		elif command == "":
 			pass
