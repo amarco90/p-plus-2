@@ -7,7 +7,7 @@ import threading
 from time import sleep
 
 # constants
-VERSION     = "p+2 0.0.0.0.0.0.0.0.1.0 superAlpha"
+VERSION     = "p+2 0.0.0.0.0.0.1.0 superAlpha"
 MIN_ARGS    = 2
 ENCODING    = "utf_8"
 PEER_LIST   = 0
@@ -51,7 +51,10 @@ def hasErrorsAddPeer(inputSplitted):
 	if not goodIP(ip) or not goodPort(port): return True
 	return False
 
-# some classes needed
+# some needed classes
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+	pass
+
 class PeerList(socketserver.BaseRequestHandler):
 	# overriding the handle method
 	def handle(self):
@@ -65,8 +68,8 @@ class PeerList(socketserver.BaseRequestHandler):
 		msg += "\n"
 		response = bytes(msg, ENCODING)
 		self.request.send(response)
+		self.request.shutdown(socket.SHUT_RDWR)
 		self.request.close()
-		# self.server.close() # test this!
 
 class Query(socketserver.BaseRequestHandler):
 
@@ -81,6 +84,7 @@ class Query(socketserver.BaseRequestHandler):
 		msg += "\n"
 		response = bytes(msg, ENCODING)
 		self.request.send(response)
+		self.request.shutdown(socket.SHUT_RDWR)
 		self.request.close()
 
 class Upload(socketserver.BaseRequestHandler):
@@ -95,10 +99,8 @@ class Upload(socketserver.BaseRequestHandler):
 			f.close()
 		# sending the file
 		self.request.send(fileContent)
+		self.request.shutdown(socket.SHUT_RDWR)
 		self.request.close()
-
-class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-	pass
 	
 class UpdatePeers ( threading.Thread ):
 
@@ -120,6 +122,9 @@ class UpdatePeers ( threading.Thread ):
 							auxPeers.append(oP)
 				except socket.error:
 					peers.remove(p)
+				finally:
+					sockt.shutdown(socket.SHUT_RDWR)
+					sockt.close()
 			
 			peers += auxPeers
 					
@@ -165,32 +170,32 @@ if __name__ == "__main__":
 	# main loop
 	command = ""
 	while command != "quit":
-		userInput = input("> ")
+		userInput = input("> ").strip()
 		inputSplitted = userInput.split(" ")
 		command = inputSplitted[0]
 			
 		if   command == "help":
 			print("Allowed commands: ")
-			print("\t"+ BOLD +"setfolder"+ END_COLOR +" PATH (Set the download/upload folder to the given path)")
 			print("\t"+ BOLD +"addpeer"+ END_COLOR +" IP:PORT (Add the given IP:port to the list of peers")
+			print("\t"+ BOLD +"setfolder"+ END_COLOR +" PATH (Set the download/upload folder to the given path)")
 			print("\t"+ BOLD +"query"+ END_COLOR +" FILENAME (Search, the file name given to each of the peers)")
-			print("\t"+ BOLD +"quit"+ END_COLOR +" (Returns you to a new dimension of happiness and awesomeness, now you have all the porn of the world)")
+			print("\t"+ BOLD +"quit"+ END_COLOR +" (Returns you to a new dimension of happiness and awesomeness)")
 		elif command == "setfolder":
 			if len(inputSplitted) == 2 and os.path.exists(inputSplitted[1]):
 				myFolder = inputSplitted[1]
 			else:
-				print("That folder does not exist")
+				sys.stderr.write("That folder does not exist\n")
 		elif command == "addpeer":
-			error = "A peer must be specified in this way:\n\tpeer-ip:peer-port"
+			error = "A peer must be specified in this way:\n\tpeer-ip:peer-port\n"
 			if hasErrorsAddPeer(inputSplitted): 
-				print(error)
+				sys.stderr.write(error)
 			else: 
 				if (myHost +":"+ str(myPort)) != inputSplitted[1] and not inputSplitted[1] in peers: 
 					peers.append(inputSplitted[1])
 		elif command == "query" and len(myFolder) == 0:
-			print("First, you have to set the folder.")
+			sys.stderr.write("First, you have to set the folder.\n")
 		elif command == "query" and len(peers) == 0:
-			print("First, you have to add a new peer.")
+			sys.stderr.write("You have no peers to talk with, you can add a peer with the "+ BOLD +"addpeer"+ END_COLOR +" command.\n")
 		elif command == "query":
 			fileName = userInput.split(None, 1)
 			if len(fileName) == 2: fileName = fileName[1]
@@ -211,12 +216,9 @@ if __name__ == "__main__":
 						aux = sock.recv(1024)
 						dataReceived += aux
 					filesPeer = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
-					# files += filesPeer  NO VA AQUIIIIIIII!!!!!! MASTERBUUGGGGGGGGG!!!!!! 5:45am
 					if len(filesPeer) >= 1 and filesPeer[0] != "":
 						files += filesPeer
-						print("\nMatches in peer ("+ p +" ", end="")
-						os.system("ping -c 1 "+ p.split(":")[0] +" | tail -1| awk '{printf "+ '"' +"%.3f"+ '"' + ", $4}' | cut -d '/' -f 2")
-						print("ms):")
+						print("\nMatches in peer ("+ p +")")
 						for j in range(i, len(files)):
 							line = files[j]
 							file = line[line.rfind(os.sep) + 1:]
@@ -259,13 +261,12 @@ if __name__ == "__main__":
 							f.write(dataReceived)
 						f.close()
 					except socket.error:
-						print("The peer is down.")
+						sys.stderr.write("The peer is down.\n")
 					
 		elif command == "quit":
 			byeBye = True
-			pass
 		elif command == "":
 			pass
 		else:
-			print("Command not found")
+			sys.stderr.write("Command not found\n")
 	exit(0)
