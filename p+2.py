@@ -7,7 +7,7 @@ import threading
 from time import sleep
 
 # constants
-VERSION     = "p+2 0.0.0.0.0.0.1.0 superAlpha"
+VERSION     = "0.1"
 MIN_ARGS    = 2
 ENCODING    = "utf_8"
 PEER_LIST   = 0
@@ -123,7 +123,6 @@ class UpdatePeers ( threading.Thread ):
 				except socket.error:
 					peers.remove(p)
 				finally:
-					sockt.shutdown(socket.SHUT_RDWR)
 					sockt.close()
 			
 			peers += auxPeers
@@ -177,9 +176,10 @@ if __name__ == "__main__":
 		if   command == "help":
 			print("Allowed commands: ")
 			print("\t"+ BOLD +"addpeer"+ END_COLOR +" IP:PORT (Add the given IP:port to the list of peers")
-			print("\t"+ BOLD +"setfolder"+ END_COLOR +" PATH (Set the download/upload folder to the given path)")
+			print("\t"+ BOLD +"list"+ END_COLOR +" shows the list of peers to which we are connected")
 			print("\t"+ BOLD +"query"+ END_COLOR +" FILENAME (Search, the file name given to each of the peers)")
 			print("\t"+ BOLD +"quit"+ END_COLOR +" (Returns you to a new dimension of happiness and awesomeness)")
+			print("\t"+ BOLD +"setfolder"+ END_COLOR +" PATH (Set the download/upload folder to the given path)")
 		elif command == "setfolder":
 			if len(inputSplitted) == 2 and os.path.exists(inputSplitted[1]):
 				myFolder = inputSplitted[1]
@@ -192,76 +192,81 @@ if __name__ == "__main__":
 			else: 
 				if (myHost +":"+ str(myPort)) != inputSplitted[1] and not inputSplitted[1] in peers: 
 					peers.append(inputSplitted[1])
-		elif command == "query" and len(myFolder) == 0:
-			sys.stderr.write("First, you have to set the folder.\n")
-		elif command == "query" and len(peers) == 0:
-			sys.stderr.write("You have no peers to talk with, you can add a peer with the "+ BOLD +"addpeer"+ END_COLOR +" command.\n")
+		elif command == "list":
+			print(peers)
 		elif command == "query":
-			fileName = userInput.split(None, 1)
-			if len(fileName) == 2: fileName = fileName[1]
-			else: fileName = ""
-			nameToSend = bytes(fileName + "\n", ENCODING)
-			i = 0
-			files = []
-			sourcePeer = []
-			for p in peers:
-				try:
-					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-					address = p.split(":")
-					sock.connect((address[0], int(address[1]) + QUERY))
-					sock.sendall(nameToSend)
-					aux = sock.recv(1024)
-					dataReceived = aux
-					while len(aux) > 0:
-						aux = sock.recv(1024)
-						dataReceived += aux
-					filesPeer = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
-					if len(filesPeer) >= 1 and filesPeer[0] != "":
-						files += filesPeer
-						print("\nMatches in peer ("+ p +")")
-						for j in range(i, len(files)):
-							line = files[j]
-							file = line[line.rfind(os.sep) + 1:]
-							i += 1
-							print("%5d\t" % i, end="")
-							if fileName == "": 
-								print(OK_COLOR + file + END_COLOR)
-							else:
-								pos = 0
-								fileLower = file.lower().split(fileName.lower())
-								for k in range(len(fileLower)-1):
-									aux = pos + len(fileLower[k])
-									print(file[pos:aux] + OK_COLOR + file[aux: aux+len(fileName)] + END_COLOR, end="")
-									pos = aux + len(fileName)
-								print(file[pos:pos+len(fileLower[len(fileLower)-1])])
-					sourcePeer.append( (i, p) )
-				except socket.error:
-					pass
-			if len(files) >= 1 and files[0] != "":
-				numFile = ""
-				while not numFile.isdigit() or int(numFile) < 0 or int(numFile) > i:
-					numFile = input("\nSelect the file you want to download (0 if you want to cancel): ")
-				numFile = int(numFile)
-				if numFile > 0:
-					k = 0
-					sP = sourcePeer[k]
-					while numFile > sP[0]:
-						k += 1
-						sP = sourcePeer[k]
+			if   len(myFolder) == 0:
+				sys.stderr.write("First you have to set the folder.\n")
+			elif len(peers) == 0:
+				sys.stderr.write("You have no peers to talk with, you can add a peer with the "+ BOLD +"addpeer"+ END_COLOR +" command.\n")
+			else:
+				fileName = userInput.split(None, 1)
+				if len(fileName) == 2: fileName = fileName[1]
+				else: fileName = ""
+				nameToSend = bytes(fileName + "\n", ENCODING)
+				i = 0
+				files = []
+				sourcePeer = []
+				for p in peers:
 					try:
 						sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-						address = sP[1].split(":")
-						sock.connect( (address[0], int(address[1]) + DOWNLOAD) )
-						sock.sendall(bytes(files[numFile - 1] + "\n", ENCODING))
-						f = open(myFolder + files[numFile - 1][files[numFile - 1].rfind(os.sep):], "wb")
-						dataReceived = sock.recv(1024)
-						f.write(dataReceived)
-						while len(dataReceived) > 0:
+						address = p.split(":")
+						sock.connect((address[0], int(address[1]) + QUERY))
+						sock.sendall(nameToSend)
+						aux = sock.recv(1024)
+						dataReceived = aux
+						while len(aux) > 0:
+							aux = sock.recv(1024)
+							dataReceived += aux
+						filesPeer = str(dataReceived.decode(ENCODING)).split("\n")[:-1]
+						if len(filesPeer) >= 1 and filesPeer[0] != "":
+							files += filesPeer
+							print("\nMatches in peer ("+ p +")")
+							for j in range(i, len(files)):
+								line = files[j]
+								file = line[line.rfind(os.sep) + 1:]
+								i += 1
+								print("%5d\t" % i, end="")
+								if fileName == "": 
+									print(OK_COLOR + file + END_COLOR)
+								else:
+									pos = 0
+									fileLower = file.lower().split(fileName.lower())
+									for k in range(len(fileLower)-1):
+										aux = pos + len(fileLower[k])
+										print(file[pos:aux] + OK_COLOR + file[aux: aux+len(fileName)] + END_COLOR, end="")
+										pos = aux + len(fileName)
+									print(file[pos:pos+len(fileLower[len(fileLower)-1])])
+						sourcePeer.append( (i, p) )
+					except socket.error:
+						pass
+				if len(files) >= 1 and files[0] != "":
+					numFile = ""
+					while not numFile.isdigit() or int(numFile) < 0 or int(numFile) > i:
+						numFile = input("\nSelect the file you want to download (0 if you want to cancel): ")
+					numFile = int(numFile)
+					if numFile > 0:
+						k = 0
+						sP = sourcePeer[k]
+						while numFile > sP[0]:
+							k += 1
+							sP = sourcePeer[k]
+						try:
+							sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+							address = sP[1].split(":")
+							print("Starting download...")
+							sock.connect( (address[0], int(address[1]) + DOWNLOAD) )
+							sock.sendall(bytes(files[numFile - 1] + "\n", ENCODING))
+							f = open(myFolder + files[numFile - 1][files[numFile - 1].rfind(os.sep):], "wb")
 							dataReceived = sock.recv(1024)
 							f.write(dataReceived)
-						f.close()
-					except socket.error:
-						sys.stderr.write("The peer is down.\n")
+							while len(dataReceived) > 0:
+								dataReceived = sock.recv(1024)
+								f.write(dataReceived)
+							f.close()
+							print("Download completed ("+ (myFolder + files[numFile - 1][files[numFile - 1].rfind(os.sep):]) +")")
+						except socket.error:
+							sys.stderr.write("The peer is down.\n")
 					
 		elif command == "quit":
 			byeBye = True
